@@ -11,7 +11,7 @@ This gem subclasses RetryJobs, the default Sidekiq middleware.
 Imagine being on call for your web application, you are the first line of defense.
 You can expect to be woken up by your phone or pager late at night for a variety of incidents.
 
-One such night, at 3 A.M, I was awoken to my to the blaring theme song of Scott Pilgrim.
+One such night, at 3 A.M, I was awoken to the blaring theme song of Scott Pilgrim.
 No, this was not some noisy neighbours, only PagerDuty overriding my phone's silent setting
 because the error rate on our background workers had sharply risen to 20%.
 
