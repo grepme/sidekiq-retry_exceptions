@@ -1,14 +1,47 @@
-# Sidekiq::RetryExceptions
+# Sidekiq Retry Exceptions
 
 [![Build Status](https://travis-ci.org/grepme/sidekiq-retry_exceptions.svg?branch=master)](https://travis-ci.org/grepme/sidekiq-retry_exceptions)
 
-Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/sidekiq/retry_exceptions`. To experiment with that code, run `bin/console` for an interactive prompt.
+Retry jobs without generating unnecessary noise in your bug tracker, New Relic, PagerDuty, etc.
 
-TODO: Delete this and the text above, and describe your gem
+This gem subclasses RetryJobs, the default Sidekiq middleware.
+
+# Why Was This Made?
+
+Imagine being on call for your web application, you are the first line of defense.
+You can expect to be woken up by your phone or pager late at night for a variety of incidents.
+
+One such night, at 3 A.M, I was awoken to my to the blaring theme song of Scott Pilgrim.
+No, this was not some noisy neighbours, only PagerDuty overriding my phone's silent setting
+because the error rate on our background workers had sharply risen to 20%.
+
+The first place I checked was the Sidekiq retries queue to examine why
+so many jobs were failing in the first place. I was greeted with a web hook exception:
+did not receive 2xx status code from server.
+
+This is when I realized I was at the mercy of our clients' servers. They'd eventually
+get the data, retrying every hour for 48 hours, but not before I lost sleep over it.
+
+I wanted the retry functionality of sidekiq without the noise of an exception that
+was out of my control.
+
+This gem does violate one of Sidekiq's best practices:
+
+> Let Sidekiq catch errors raised by your jobs. Sidekiq's built-in retry mechanism will catch those exceptions and retry the jobs regularly. The error service will notify you of the exception. You fix the bug, deploy the fix and Sidekiq will retry your job successfully.
+> https://github.com/mperham/sidekiq/wiki/Error-Handling
+
+The problem with this is that I had no control over what an external API consumer
+will return as a status code. There was no bug to fix on my end.
+
+I'd suggest checking if your incident reporting can filter out expected errors
+like the one above before using this gem. Make sure they are 100% unavoidable
+and you aren't discounting legitimate issues in your code.
+
+The best practice in my mind is one that you won't lose sleep over.
 
 ## Installation
 
-Add this line to your application's Gemfile:
+Add this line to your application's Gemfile after the sidekiq gem:
 
 ```ruby
 gem 'sidekiq-retry_exceptions'
@@ -24,17 +57,23 @@ Or install it yourself as:
 
 ## Usage
 
-TODO: Write usage instructions here
+A mock example for your worker:
 
-## Development
+```ruby
+def perform(args)
+  if service_unavailable?
+    raise Sidekiq::RetryException.new("Try again later...")
+  end
+end
+```
 
-After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake spec` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
-
-To install this gem onto your local machine, run `bundle exec rake install`. To release a new version, update the version number in `version.rb`, and then run `bundle exec rake release`, which will create a git tag for the version, push git commits and tags, and push the `.gem` file to [rubygems.org](https://rubygems.org).
+You can also subclass Sidekiq::RetryException for a more descriptive exception.
+Good practice is to keep these exceptions to only your worker, make sure
+these exceptions are not deep in your model logic.
 
 ## Contributing
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/[USERNAME]/sidekiq-retry_exceptions.
+Bug reports and pull requests are welcome on GitHub at https://github.com/grepme/sidekiq-retry_exceptions.
 
 
 ## License
